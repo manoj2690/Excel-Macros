@@ -1,0 +1,608 @@
+Sub main()
+
+Dim Wb As Workbook
+Set Wb = ThisWorkbook
+Wb.Activate
+
+Dim sh As Worksheet
+
+    
+Call checkTableExists(Wb)
+
+
+'inserting columns into table at the end
+Dim tb1 As ListObject
+Dim cols As Integer
+Dim i As Integer
+
+cols = 2
+
+ Set sh = Sheets("Sheet2")
+    
+sh.Activate
+sh.Select
+Set tb1 = ActiveSheet.ListObjects("test1")
+
+ For Each fld In tb1.ListColumns
+        If fld.Name = "Assignee_dept" & fld.Name = "Ageing" Then
+                Dim colH(1 To 2) As String
+
+                colH(1) = "Assignee_dept"
+                colH(2) = "Ageing"
+ 
+                For i = 1 To cols
+                Call insertColumn(tb1, colH(i))
+                Next i
+            Exit For
+        End If
+    Next
+
+
+
+'calling vlookup to assign dept for assignee column
+Call vlookup_Table(Wb)
+
+'calling calculate ageing
+Call calc_ageing(Wb)
+
+'calling report_Teamwise_Severity()
+
+Call report_Teamwise_Severity
+
+'calling report_Teamwise_Severity()
+
+Call report_Teamwise_status
+
+'calling report_Teamwise_Severity()
+
+Call report_Teamwise_ageing
+
+'calling report_defecttrend_opencount()
+
+Call report_defecttrend_opencount
+
+'calling report_defecttrend_closedcount()
+
+Call report_defecttrend_closedcount
+
+'calling report_defecttrend_maxestimated_opencount()
+
+Call report_defecttrend_maxestimated_opencount
+
+'calling report_defecttrend_maxestimated_opencount()
+Call report_defecttrend_maxestimated_closedcount
+End Sub
+
+
+'verify if the sheet has an existing table with the table name
+Sub checkTableExists(Wb As Workbook)
+
+Dim sh As Worksheet
+ Set sh = Sheets("Sheet2")
+    
+sh.Activate
+sh.Select
+
+Dim ListObj As ListObject
+Dim colH As String
+
+'    On Error Resume Next
+'    Set ListObj = ActiveSheet.ListObjects("test1")
+'    'Set colH = "col1"
+'    On Error GoTo 0
+    
+   '  If ListObj Is Nothing Then
+   If TableExists(ActiveSheet, "test1") Then
+    
+        MsgBox "table already exists in the current workbook sheet"
+
+    Else
+  
+        Call A_SelectAllMakeTable(Wb)
+  
+  End If
+End Sub
+
+Function TableExists(ws As Worksheet, tblNam As String) As Boolean
+Dim oTbl As ListObject
+For Each oTbl In ws.ListObjects
+    If oTbl.Name = tblNam Then
+        TableExists = True
+        MsgBox TableExists
+        Exit Function
+    End If
+Next oTbl
+TableExists = False
+MsgBox TableExists
+End Function
+
+'make the list into a table
+Sub A_SelectAllMakeTable(Wb As Workbook)
+    Dim tbl As ListObject
+    Dim rng As Range
+    Dim sh As Worksheet
+    
+    Wb.Activate
+    Set sh = Sheets("Sheet2")
+    
+    sh.Activate
+    sh.Select
+    
+    Set rng = Range(Range("A1"), Range("A1").SpecialCells(xlLastCell))
+    Set tbl = ActiveSheet.ListObjects.Add(xlSrcRange, rng, xlGuess, xlYes)
+    tbl.TableStyle = "TableStyleMedium15"
+    tbl.Name = "test1"
+End Sub
+
+'insert column and column headers
+
+Sub insertColumn(tb1 As ListObject, colH As String)
+
+    Dim lastColumn As Long
+    lastColumn = ActiveSheet.Range("A1").SpecialCells(xlCellTypeLastCell).Column
+    tb1.ListColumns.Add(lastColumn + 1).Name = colH
+    
+End Sub
+
+'do a vlookup with the dept table
+Sub vlookup_Table(Wb As Workbook)
+
+Dim sh As Worksheet
+    
+    Wb.Activate
+    Set sh = Sheets("Sheet2")
+    
+    sh.Activate
+    sh.Select
+
+sh.Range("$AV$2").Formula = "=VLOOKUP([@Assignee],Lookup!lookup[#All],2,FALSE)"
+
+End Sub
+
+'calculate ageing based on created date, resolved date and current date for different statuses
+Sub calc_ageing(Wb As Workbook)
+
+Dim sh As Worksheet
+    
+    Wb.Activate
+    Set sh = Sheets("Sheet2")
+    
+    sh.Activate
+    sh.Select
+Dim check_stat As String
+
+check_stat = "Closed"
+
+sh.Range("$AW$2").Formula = "=IF([@Status]<>" & """" & check_stat & """" & ", TODAY()-INT([@Created]),INT([@Resolved])-INT([@Created]))"
+
+End Sub
+
+'Fill in Teamwise report for different severity
+Sub report_Teamwise_Severity()
+
+Dim i As Integer
+Dim h As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+Dim sev(1 To 4) As String
+
+sev(1) = "Critical"
+sev(2) = "High"
+sev(3) = "Medium"
+sev(4) = "Low"
+
+
+For h = 1 To 4
+
+    For i = 1 To 11
+        Call dbconn(dept(i), i, sev(h), "", "", "severity")
+Next i
+Next h
+End Sub
+'Fill in Teamwise report for statuses
+Sub report_Teamwise_status()
+
+Dim i As Integer
+Dim h As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+Dim status(1 To 7) As String
+
+status(1) = "Open"
+status(2) = "Issue Review"
+status(3) = "In Progress"
+status(4) = "Ready for Testing"
+status(5) = "Reopened"
+status(6) = "Resolved"
+status(7) = "Closed"
+
+
+For h = 1 To 7
+
+    For i = 1 To 11
+        Call dbconn(dept(i), i, "", status(h), "", "status")
+Next i
+Next h
+End Sub
+
+'Fill in Teamwise report for ageing
+Sub report_Teamwise_ageing()
+
+Dim i As Integer
+Dim h As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+Dim ageing(1 To 7) As String
+
+ageing(1) = "<=2"
+ageing(2) = "<=5"
+ageing(3) = "<=10"
+ageing(4) = ">10"
+
+For h = 1 To 7
+
+    For i = 1 To 11
+        Call dbconn(dept(i), i, "", "", ageing(h), "ageing")
+Next i
+Next h
+End Sub
+
+'Fill in defect trend open count
+Sub report_defecttrend_opencount()
+
+Dim i As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+For i = 1 To 11
+        Call dbconn(dept(i), i, "", "", "", "opencount")
+Next i
+
+End Sub
+
+'Fill in defect trend closed count
+Sub report_defecttrend_closedcount()
+
+Dim i As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+For i = 1 To 11
+        Call dbconn(dept(i), i, "", "", "", "closedcount")
+Next i
+
+End Sub
+
+Sub report_defecttrend_maxestimated_opencount()
+
+Dim i As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+For i = 1 To 11
+        Call dbconn(dept(i), i, "", "", "", "maxestopen")
+Next i
+
+End Sub
+
+Sub report_defecttrend_maxestimated_closedcount()
+
+Dim i As Integer
+
+Dim dept(1 To 11) As String
+
+dept(1) = "BTS-BA"
+dept(2) = "BTS-Deploy"
+dept(3) = "BTS-Dev"
+dept(4) = "BTS-Platform"
+dept(5) = "DMO"
+dept(6) = "SRC-BWC"
+dept(7) = "SRC-CFR"
+dept(8) = "SRC-EPM"
+dept(9) = "SRC-GCF"
+dept(10) = "TD-Dev"
+dept(11) = "Test-SIT"
+
+
+For i = 1 To 11
+        Call dbconn(dept(i), i, "", "", "", "maxestclosed")
+Next i
+
+End Sub
+
+'use sql queries to access table fields/columns. Set the library before running the macro, Tools--> References--> Microsoft ActiveX Data Objects 2.8 library
+Sub dbconn(dept As String, i As Integer, sev As String, status As String, ageing As String, report As String)
+
+Dim k As Integer
+Dim conStr As String
+Dim cnn As New ADODB.Connection
+Dim rs As New ADODB.Recordset
+
+
+conStr = "Provider=Microsoft.JET.OLEDB.4.0;Data Source='D:\Manoj\Excel tricks\Macros\Try 1.xlsm';Extended Properties='Excel 8.0;HDR=YES;IMEX=1';"
+cnn.Open conStr
+    
+If report = "severity" Then
+
+strSQL = "select count(Assignee_dept) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Priority = " & " '" & sev & " '" & ""
+
+'MsgBox strSQL
+
+ElseIf report = "status" Then
+
+strSQL = "select count(Assignee_dept) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Status = " & " '" & status & " '" & ""
+
+ElseIf report = "ageing" Then
+
+strSQL = "select count(Assignee_dept) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Ageing " & ageing & ""
+
+ElseIf report = "opencount" Then
+
+strSQL = "select count(Assignee_dept) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Status = 'Open'"
+
+ElseIf report = "closedcount" Then
+
+strSQL = "select count(Assignee_dept) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Status = 'Closed'"
+
+
+ElseIf report = "maxestopen" Then
+
+strSQL = "select max(Ageing) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Status = 'Open'"
+
+ElseIf report = "maxestclosed" Then
+
+strSQL = "select max(Ageing) from [Sheet2$] where Assignee_dept = " & " '" & dept & " '" & "and Status = 'Closed'"
+
+End If
+
+rs.Open strSQL, cnn, adOpenStatic, adLockOptimistic, adCmdText
+
+j = rs.RecordCount
+
+'Fetches latest
+
+j = rs.RecordCount
+If j > 0 Then
+
+'for severity reports
+
+If report = "severity" Then
+
+            k = i + 3
+            'MsgBox k
+            If sev = "Critical" Then
+            
+                rs.MoveFirst
+                Worksheets("Sheet1").Range("B" & k).ClearContents
+                Worksheets("Sheet1").Range("B" & k).CopyFromRecordset rs
+            ElseIf sev = "High" Then
+            
+                rs.MoveFirst
+                Worksheets("Sheet1").Range("C" & k).ClearContents
+                Worksheets("Sheet1").Range("C" & k).CopyFromRecordset rs
+            
+            ElseIf sev = "Medium" Then
+            
+                rs.MoveFirst
+                Worksheets("Sheet1").Range("D" & k).ClearContents
+                Worksheets("Sheet1").Range("D" & k).CopyFromRecordset rs
+            ElseIf sev = "Low" Then
+            
+                rs.MoveFirst
+                Worksheets("Sheet1").Range("E" & k).ClearContents
+                Worksheets("Sheet1").Range("E" & k).CopyFromRecordset rs
+            
+            End If
+            
+            
+'for status reports
+ElseIf report = "status" Then
+
+        k = i + 3
+      '  MsgBox k
+        If status = "Open" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("H" & k).ClearContents
+            Worksheets("Sheet1").Range("H" & k).CopyFromRecordset rs
+        
+        ElseIf status = "Issue Review" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("I" & k).ClearContents
+            Worksheets("Sheet1").Range("I" & k).CopyFromRecordset rs
+        
+        ElseIf status = "In Progress" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("J" & k).ClearContents
+            Worksheets("Sheet1").Range("J" & k).CopyFromRecordset rs
+        
+        ElseIf status = "Ready for Testing" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("K" & k).ClearContents
+            Worksheets("Sheet1").Range("K" & k).CopyFromRecordset rs
+        
+        ElseIf status = "Reopened" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("L" & k).ClearContents
+            Worksheets("Sheet1").Range("L" & k).CopyFromRecordset rs
+        
+        ElseIf status = "Resolved" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("M" & k).ClearContents
+            Worksheets("Sheet1").Range("M" & k).CopyFromRecordset rs
+        
+        ElseIf status = "Closed" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("N" & k).ClearContents
+            Worksheets("Sheet1").Range("N" & k).CopyFromRecordset rs
+        End If
+
+'for ageing reports
+ElseIf report = "ageing" Then
+
+  k = i + 3
+      '  MsgBox k
+        If ageing = "<=2" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("Q" & k).ClearContents
+            Worksheets("Sheet1").Range("Q" & k).CopyFromRecordset rs
+        
+        ElseIf ageing = "<=5" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("R" & k).ClearContents
+            Worksheets("Sheet1").Range("R" & k).CopyFromRecordset rs
+        
+        ElseIf ageing = "<=10" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("S" & k).ClearContents
+            Worksheets("Sheet1").Range("S" & k).CopyFromRecordset rs
+        
+        ElseIf ageing = ">10" Then
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("T" & k).ClearContents
+            Worksheets("Sheet1").Range("T" & k).CopyFromRecordset rs
+
+        End If
+        
+ElseIf report = "opencount" Then
+
+  k = i + 3
+      '  MsgBox k
+        
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("W" & k).ClearContents
+            Worksheets("Sheet1").Range("W" & k).CopyFromRecordset rs
+            
+ElseIf report = "closedcount" Then
+
+  k = i + 3
+      '  MsgBox k
+        
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("Y" & k).ClearContents
+            Worksheets("Sheet1").Range("Y" & k).CopyFromRecordset rs
+
+ElseIf report = "maxestopen" Then
+
+  k = i + 3
+      '  MsgBox k
+        
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("X" & k).ClearContents
+            Worksheets("Sheet1").Range("X" & k).CopyFromRecordset rs
+            
+            End If
+            
+ElseIf report = "maxestclosed" Then
+
+  k = i + 3
+      '  MsgBox k
+        
+        
+            rs.MoveFirst
+            Worksheets("Sheet1").Range("Z" & k).ClearContents
+            Worksheets("Sheet1").Range("Z" & k).CopyFromRecordset rs
+End If
+
+
+End If
+
+rs.Close
+cnn.Close
+End Sub
+
+
